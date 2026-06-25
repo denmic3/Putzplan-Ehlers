@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Familien Putzplan</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a2e4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Putzplan">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Quicksand:wght@500;700;900&display=swap');
+
+  :root {
+    --teal:#1a9e8f; --navy:#1a2e4a; --coral:#ff6b6b;
+    --gold:#f9c846; --green:#4caf7d; --lavender:#7c6fcd; --muted:#8899aa;
+    --bg:#f5f7ff; --radius:16px; --shadow:0 4px 20px rgba(0,0,0,0.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Nunito',sans-serif;background:var(--bg);color:#2d3748;padding-bottom:60px;min-height:100vh;}
+
+  .header{background:linear-gradient(135deg,var(--navy),#2a4a7a);color:white;padding:22px 20px;text-align:center;}
+  .header h1{font-size:1.5rem;font-weight:900;}
+  .header h1 span{color:var(--gold);}
+  .header p{font-size:0.85rem;opacity:0.8;margin-top:4px;}
+  .section{padding:16px;}
+  .section-title{font-size:0.75rem;font-weight:900;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;}
+
+  .child-picker{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+  .child-card{display:flex;align-items:center;gap:12px;background:white;border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);cursor:pointer;border:2.5px solid transparent;}
+  .child-card.selected{border-color:var(--c-color, var(--teal));background:var(--c-bg,#e6f7f5);}
+  .child-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+  .child-info{flex:1;}
+  .child-name{font-size:0.95rem;font-weight:800;color:var(--navy);}
+  .child-tag{font-size:0.73rem;color:var(--muted);font-weight:700;margin-top:1px;}
+  .child-check{width:22px;height:22px;border-radius:50%;border:2.5px solid #dde2ee;flex-shrink:0;}
+  .child-card.selected .child-check{background:var(--c-color,var(--teal));border-color:var(--c-color,var(--teal));position:relative;}
+  .child-card.selected .child-check::after{content:'✓';position:absolute;color:white;font-size:0.7rem;left:5px;top:1px;}
+
+  .room-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none;}
+  .room-tabs::-webkit-scrollbar{display:none;}
+  .room-tab{flex-shrink:0;padding:8px 16px;border-radius:99px;border:2px solid #dde2ee;background:white;font-weight:800;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit;font-size:0.85rem;}
+  .room-tab.active{border-color:var(--teal);background:var(--teal);color:white;}
+
+  .select-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .select-item{background:white;border-radius:12px;padding:12px;display:flex;align-items:center;gap:11px;box-shadow:var(--shadow);cursor:pointer;border:2.5px solid transparent;}
+  .select-item.selected{border-color:var(--teal);background:#e6f7f5;}
+  .s-num{width:25px;height:25px;border-radius:50%;background:#eef0f5;color:var(--muted);font-size:0.8rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .select-item.selected .s-num{color:white;}
+  .s-icon{font-size:1.3rem;}
+  .s-body{flex:1;min-width:0;}
+  .s-title{font-size:0.9rem;font-weight:800;color:var(--navy);}
+  .s-sub{font-size:0.75rem;color:var(--muted);font-weight:600;}
+  .care-alert{background:#f0ecff;color:var(--lavender);font-size:0.68rem;font-weight:800;padding:4px 9px;border-radius:99px;border:1.5px solid var(--lavender);max-width:170px;word-break:break-word;line-height:1.25;flex-shrink:0;}
+  .s-check{width:20px;height:20px;border-radius:50%;border:2px solid #dde2ee;flex-shrink:0;}
+  .select-item.selected .s-check{background:var(--teal);border-color:var(--teal);position:relative;}
+  .select-item.selected .s-check::after{content:'✓';position:absolute;color:white;font-size:0.75rem;left:4px;top:0px;}
+
+  .send-btn{display:block;width:100%;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;font-family:inherit;font-size:1rem;font-weight:900;padding:15px;border-radius:12px;cursor:pointer;text-align:center;text-decoration:none;box-shadow:0 4px 12px rgba(37,211,102,0.2);}
+  .send-btn:disabled{background:#cbd5e0;box-shadow:none;cursor:not-allowed;opacity:0.6;}
+
+  #elternAnsicht,#kinderAnsicht{display:none;}
+
+  /* KIND-MODUS BASIS */
+  .kid-header{padding:20px 20px 16px;text-align:center;color:white;position:relative;}
+  .kid-header h1{font-size:1.4rem;font-weight:900;}
+  .kid-header p{font-size:0.85rem;opacity:0.85;margin-top:4px;}
+  .kid-progress-bg{background:rgba(255,255,255,0.25);border-radius:99px;height:10px;overflow:hidden;margin-top:14px;}
+  .kid-progress-fill{height:100%;background:white;border-radius:99px;transition:width 0.4s;width:0%;}
+  .kid-progress-text{font-size:0.78rem;font-weight:800;margin-top:6px;opacity:0.9;}
+
+  /* TEEN MODE (Mia) */
+  .teen-body{background:#f4f6fa;min-height:100vh;padding-bottom:40px;}
+  .teen-header{background:#1a2e4a;}
+  .teen-list{padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+  .teen-card{background:white;border-radius:10px;padding:13px 14px;display:flex;align-items:center;gap:12px;border:1.5px solid #e2e6ef;cursor:pointer;}
+  .teen-card.done{background:#f0f4f2;border-color:#cfe3d8;}
+  .teen-card.done .teen-title{text-decoration:line-through;color:#9aa5b1;}
+  .teen-checkbox{width:20px;height:20px;border-radius:4px;border:2px solid #c5cbd6;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:transparent;}
+  .teen-card.done .teen-checkbox{background:#1a9e8f;border-color:#1a9e8f;color:white;}
+  .teen-icon{font-size:1.2rem;flex-shrink:0;width:22px;text-align:center;}
+  .teen-text{flex:1;min-width:0;}
+  .teen-title{font-size:0.92rem;font-weight:700;color:#1a2e4a;}
+  .teen-meta{font-size:0.72rem;color:#8899aa;font-weight:600;margin-top:2px;}
+  .teen-steps{font-size:0.78rem;color:#6b7785;margin-top:6px;padding-left:0;list-style:none;display:none;}
+  .teen-card.expanded .teen-steps{display:block;}
+  .teen-steps li{padding:2px 0;}
+  .teen-steps li::before{content:'– ';color:#aab4c0;}
+
+  /* FOCUS MODE (Jano) */
+  .focus-body{background:linear-gradient(180deg,#f0f9ff,#fff);min-height:100vh;padding-bottom:40px;}
+  .focus-header{background:linear-gradient(135deg,#3b82f6,#6366f1);}
+  .focus-list{padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+  .focus-list-card{background:white;border-radius:16px;padding:14px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 4px 16px rgba(59,130,246,0.10);cursor:pointer;border:2.5px solid transparent;}
+  .focus-list-card.done{opacity:0.55;background:#f0f9ff;border-color:#93c5fd;}
+  .focus-list-card.done .focus-list-title{text-decoration:line-through;color:#aab4c0;}
+  .focus-checkbox{width:26px;height:26px;border-radius:50%;border:2.5px solid #93c5fd;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.9rem;color:transparent;margin-top:2px;}
+  .focus-list-card.done .focus-checkbox{background:#3b82f6;border-color:#3b82f6;color:white;}
+  .focus-list-icon{font-size:1.6rem;flex-shrink:0;width:30px;text-align:center;}
+  .focus-list-text{flex:1;min-width:0;}
+  .focus-list-title{font-size:0.95rem;font-weight:800;color:#1a2e4a;}
+  .focus-list-meta{font-size:0.74rem;color:#8899aa;font-weight:700;margin-top:2px;}
+  .focus-list-micro{font-size:0.83rem;color:#2563eb;font-weight:800;background:#eff6ff;padding:6px 10px;border-radius:8px;margin-top:8px;display:inline-block;}
+  .focus-list-steps{font-size:0.8rem;color:#6b7785;font-weight:600;line-height:1.7;margin-top:8px;padding-left:0;list-style:none;display:none;}
+  .focus-list-card.expanded .focus-list-steps{display:block;}
+  .focus-list-steps li{padding-left:16px;position:relative;}
+  .focus-list-steps li::before{content:'→';position:absolute;left:0;color:#3b82f6;font-weight:900;}
+  .focus-care{font-size:0.75rem;color:#7c6fcd;background:#f0ecff;padding:6px 10px;border-radius:8px;margin-top:8px;font-weight:700;display:inline-block;}
+  .focus-celebration{display:none;text-align:center;padding:24px 20px;background:linear-gradient(135deg,#eff6ff,#fff);margin:16px;border-radius:16px;border:2px dashed #3b82f6;}
+  .focus-celebration.show{display:block;}
+
+  /* MINI MODE (Tilda) */
+  .mini-body{background:linear-gradient(180deg,#fffbe8,#fff);min-height:100vh;display:flex;flex-direction:column;font-family:'Quicksand',sans-serif;position:relative;overflow:hidden;}
+  .mini-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;position:relative;}
+  .mini-scene{width:100%;max-width:300px;border-radius:28px;padding:36px 20px;margin-bottom:22px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 2px 14px rgba(0,0,0,0.05);}
+  .mini-scene-icon{font-size:7rem;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.12));}
+  .mini-title{font-size:1.6rem;font-weight:900;color:#1a2e4a;margin-bottom:24px;}
+  .mini-btn{background:linear-gradient(135deg,#f9c846,#f7b733);border:none;color:#1a2e4a;font-family:'Quicksand',sans-serif;font-size:1.3rem;font-weight:900;padding:24px 48px;border-radius:99px;box-shadow:0 8px 24px rgba(249,200,70,0.4);cursor:pointer;}
+  .mini-confetti-stage{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50;}
+  .confetti-piece{position:absolute;top:-40px;animation:confettiFall linear forwards;}
+  @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(110vh) rotate(360deg);opacity:0.9;}}
+
+  /* WhatsApp Fertig-Button */
+  .wa-done-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:calc(100% - 32px);margin:16px auto 24px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:900;padding:16px;border-radius:14px;cursor:pointer;box-shadow:0 4px 16px rgba(37,211,102,0.3);}
+  .wa-done-btn svg{flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<!-- ELTERN BEREICH -->
+<div id="elternAnsicht">
+  <div class="header">
+    <h1>🏠 Putzplan <span>Familie</span></h1>
+    <p>Kind auswählen, Raum & Aufgaben festlegen</p>
+  </div>
+  <div class="section">
+    <div class="section-title">1. Für wen ist der Plan?</div>
+    <div class="child-picker" id="childPicker"></div>
+
+    <div class="section-title">2. Welcher Raum?</div>
+    <div class="room-tabs" id="roomTabs"></div>
+
+    <div class="section-title">3. Aufgaben auswählen</div>
+    <div class="select-grid" id="selectGrid"></div>
+
+    <button id="whatsappBtn" class="send-btn" onclick="sendToWhatsApp()" disabled>
+      🚀 Plan via WhatsApp senden
+    </button>
+  </div>
+</div>
+
+<!-- KINDER BEREICH -->
+<div id="kinderAnsicht"></div>
+
+<script>
+const CHILDREN = {
+  eltern: { name:'Eltern', age:null, tag:'Andrea & Matti · Eltern-Modus', icon:'👨‍👩‍👧‍👦', color:'#1a9e8f', bg:'#e6f7f5', mode:'teen' },
+  mia:    { name:'Mia',   age:16,   tag:'Struktur-Modus',                 icon:'💜', color:'#7c6fcd', bg:'#f0ecff', mode:'teen'  },
+  jano:   { name:'Jano',  age:9,    tag:'ADHS & ASS · Start-Hilfe',       icon:'💙', color:'#3b82f6', bg:'#eff6ff', mode:'focus' },
+  tilda:  { name:'Tilda', age:6,    tag:'Mini-Modus · Bilder',            icon:'💛', color:'#f9c846', bg:'#fffbec', mode:'mini'  }
+};
+
+const DATA = {
+  bad_unten: { name:'Bad Unten', icon:'🚽', tasks:[
+    {id:1,  icon:'🗑️', title:'Mülleimer leeren',         time:'2 Min.', energy:'Aufwärmen', careAlert:'', steps:['Beutel zuknoten & raus','Neuen Beutel einlegen'], microStep:'Geh zum Mülleimer.'},
+    {id:2,  icon:'🧻', title:'Klopapier nachfüllen',      time:'2 Min.', energy:'Aufwärmen', careAlert:'', steps:['Vorrat kontrollieren','Neue Rolle bereitstellen'], microStep:'Schau nach dem Klopapier.'},
+    {id:3,  icon:'🧼', title:'Seife & Handtuch checken', time:'2 Min.', energy:'Aufwärmen', careAlert:'', steps:['Seifenspender auffüllen','Handtuch wechseln wenn nötig'], microStep:'Nimm das Handtuch in die Hand.'},
+    {id:4,  icon:'🪞', title:'Spiegel reinigen',          time:'3 Min.', energy:'Hauptteil', careAlert:'', steps:['Glasreiniger draufsprühen','Streifenfrei abwischen'], microStep:'Sprüh 1x auf den Spiegel.'},
+    {id:5,  icon:'🚰', title:'Waschbecken reinigen',      time:'4 Min.', energy:'Hauptteil', careAlert:'Nässe-Trigger: Handschuhe bereitstellen.', steps:['Becken auswischen','Armatur trockenreiben'], microStep:'Dreh den Hahn auf.'},
+    {id:6,  icon:'🚽', title:'Toilette reinigen',         time:'5 Min.', energy:'Gründlich', careAlert:'Ekel-Trigger: Handschuhe & klare Anleitung.', steps:['Becken innen bürsten','Deckel & Außen abwischen','Boden rund um WC wischen'], microStep:'Nimm die Bürste.'},
+    {id:7,  icon:'🧹', title:'Boden fegen & wischen',     time:'5 Min.', energy:'Gründlich', careAlert:'', steps:['Boden kehren','Feucht nachwischen'], microStep:'Hol den Besen.'}
+  ]},
+
+  wohnzimmer: { name:'Wohnzimmer', icon:'🛋️', tasks:[
+    {id:20, icon:'🧸', title:'Spielsachen wegräumen',       time:'5 Min.', energy:'Aufwärmen', careAlert:'', steps:['Alles einsammeln','In die Kiste legen'], microStep:'Fang mit dem ersten Spielzeug an.'},
+    {id:21, icon:'🛋️', title:'Kissen & Decken ordnen',     time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Kissen aufschütteln','Decke zusammenlegen'], microStep:'Schüttel das erste Kissen auf.'},
+    {id:22, icon:'📺', title:'Fernbedienungen aufräumen',   time:'2 Min.', energy:'Aufwärmen', careAlert:'', steps:['Alle suchen','An festen Platz legen'], microStep:'Find die erste Fernbedienung.'},
+    {id:23, icon:'🧺', title:'Herumliegende Wäsche einsammeln', time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Wäsche einsammeln','In den Wäschekorb'], microStep:'Fang mit dem ersten Stück an.'},
+    {id:24, icon:'🧽', title:'Couchtisch abwischen',        time:'4 Min.', energy:'Hauptteil', careAlert:'', steps:['Sachen zur Seite stellen','Mit Tuch abwischen'], microStep:'Nimm das Tuch.'},
+    {id:25, icon:'🖥️', title:'TV-Oberfläche säubern',      time:'3 Min.', energy:'Hauptteil', careAlert:'Nur trockenes Mikrofasertuch, keine Flüssigkeit!', steps:['Trocken abwischen'], microStep:'Nimm das trockene Tuch.'},
+    {id:26, icon:'🗄️', title:'Regalflächen abstauben',     time:'5 Min.', energy:'Hauptteil', careAlert:'', steps:['Gegenstände kurz wegnehmen','Fläche abwischen','Zurückstellen'], microStep:'Fang mit dem ersten Regal an.'},
+    {id:27, icon:'🧹', title:'Boden saugen',                time:'7 Min.', energy:'Gründlich', careAlert:'Lautstärke: Kopfhörer bereitstellen.', steps:['Möbel leicht verrücken','Boden in Bahnen saugen'], microStep:'Hol den Staubsauger.'},
+    {id:28, icon:'🪣', title:'Boden wischen',               time:'8 Min.', energy:'Gründlich', careAlert:'', steps:['Eimer füllen','Boden nass wischen','Trocknen lassen'], microStep:'Fülle den Eimer.'}
+  ]},
+
+  kueche: { name:'Küche', icon:'🍳', tasks:[
+    {id:40, icon:'🗑️', title:'Mülleimer leeren',            time:'3 Min.', energy:'Aufwärmen', careAlert:'Geruch: Handschuhe bereitlegen.', steps:['Beutel zuknoten','Rausbringen','Neuen einlegen'], microStep:'Geh zum Mülleimer.'},
+    {id:41, icon:'🍽️', title:'Geschirr in die Spülmaschine',time:'5 Min.', energy:'Aufwärmen', careAlert:'Ekel vor Resten: Handschuhe.', steps:['Reste in Bio','Geschirr einräumen','Maschine starten'], microStep:'Nimm das erste Teil, das du siehst.'},
+    {id:42, icon:'🍽️', title:'Sauberes Geschirr verstauen', time:'5 Min.', energy:'Aufwärmen', careAlert:'', steps:['Maschine ausräumen','Alles in den Schrank'], microStep:'Öffne den Schrank.'},
+    {id:43, icon:'🥛', title:'Arbeitsfläche freiräumen',    time:'4 Min.', energy:'Aufwärmen', careAlert:'', steps:['Alles wegsortieren','Geräte an feste Plätze'], microStep:'Räum das erste Teil weg.'},
+    {id:44, icon:'🧽', title:'Arbeitsfläche abwischen',     time:'4 Min.', energy:'Hauptteil', careAlert:'', steps:['Fläche feucht abwischen','Trocknen lassen'], microStep:'Nimm das Tuch.'},
+    {id:45, icon:'❄️', title:'Kühlschrank außen reinigen',  time:'4 Min.', energy:'Hauptteil', careAlert:'Hyperfokus-Gefahr auf Streifen: nach 4 Min. stoppen.', steps:['Front mit Tuch abwischen','Griffe reinigen'], microStep:'Sprüh 1x drauf.'},
+    {id:46, icon:'🚰', title:'Spüle reinigen',              time:'5 Min.', energy:'Hauptteil', careAlert:'Nässe-Trigger: Handschuhe.', steps:['Spüle auswischen','Armaturen trockenreiben'], microStep:'Dreh den Hahn auf.'},
+    {id:47, icon:'🧹', title:'Boden kehren',                time:'4 Min.', energy:'Hauptteil', careAlert:'', steps:['Boden in Bahnen kehren','Ecken nicht vergessen'], microStep:'Hol den Besen.'},
+    {id:48, icon:'🪣', title:'Boden wischen',               time:'6 Min.', energy:'Gründlich', careAlert:'', steps:['Eimer füllen','Feucht wischen','Trocknen'], microStep:'Fülle den Eimer.'}
+  ]},
+
+  flur: { name:'Flur', icon:'🪵', tasks:[
+    {id:60, icon:'🧥', title:'Jacken aufhängen',            time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Alle Jacken an die Haken hängen'], microStep:'Fang mit der ersten Jacke an.'},
+    {id:61, icon:'👟', title:'Schuhe ordnen',               time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['1 Paar im Eingang lassen','Rest ins Regal'], microStep:'Fang mit dem ersten Paar an.'},
+    {id:62, icon:'🎒', title:'Taschen & Rucksäcke wegräumen',time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['An festen Platz hängen oder stellen'], microStep:'Nimm die erste Tasche.'},
+    {id:63, icon:'🚪', title:'Fußmatte ausschütteln',       time:'2 Min.', energy:'Aufwärmen', careAlert:'', steps:['Matte rausnehmen','Draußen ausschütteln','Zurücklegen'], microStep:'Heb die Matte hoch.'},
+    {id:64, icon:'🪞', title:'Spiegel reinigen',            time:'3 Min.', energy:'Hauptteil', careAlert:'', steps:['Glasreiniger drauf','Streifenfrei wischen'], microStep:'Sprüh 1x auf den Spiegel.'},
+    {id:65, icon:'🧹', title:'Boden saugen',                time:'5 Min.', energy:'Hauptteil', careAlert:'', steps:['Boden absaugen','Ecken beachten'], microStep:'Hol den Staubsauger.'},
+    {id:66, icon:'🪣', title:'Boden wischen',               time:'6 Min.', energy:'Gründlich', careAlert:'Rutschgefahr: kurz "Boden nass!" sagen.', steps:['Feucht wischen','Trocknen lassen'], microStep:'Fülle den Eimer.'},
+    {id:67, icon:'🪜', title:'Treppe aufräumen',             time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Alles was auf der Treppe liegt einsammeln','An den richtigen Platz bringen'], microStep:'Fang mit dem ersten Ding auf der Treppe an.'},
+    {id:68, icon:'🧹', title:'Treppe saugen',                time:'7 Min.', energy:'Hauptteil', careAlert:'Sturzgefahr bei Ablenkung — konzentriert bleiben.', steps:['Von oben nach unten saugen','Jeden Stufenrand mitnehmen'], microStep:'Geh zur obersten Stufe.'},
+    {id:69, icon:'🪣', title:'Treppe wischen',               time:'8 Min.', energy:'Gründlich', careAlert:'Rutschgefahr — Stufen trocknen lassen bevor man drübergeht.', steps:['Eimer füllen','Stufen von oben nach unten feucht wischen','Trocknen lassen'], microStep:'Fülle den Eimer.'}
+  ]},
+
+  bad_oben: { name:'Bad Oben', icon:'🛁', tasks:[
+    {id:80, icon:'🗑️', title:'Müll leeren & Klopapier checken', time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Mülleimer leeren','Klopapier auffüllen'], microStep:'Geh zum Mülleimer.'},
+    {id:81, icon:'🧼', title:'Handtücher wechseln',          time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Benutzte zur Wäsche','Frische aufhängen'], microStep:'Nimm das erste Handtuch ab.'},
+    {id:82, icon:'🪞', title:'Spiegel reinigen',             time:'3 Min.', energy:'Hauptteil', careAlert:'', steps:['Glasreiniger drauf','Streifenfrei wischen'], microStep:'Sprüh 1x auf den Spiegel.'},
+    {id:83, icon:'🚰', title:'Waschbecken reinigen',         time:'5 Min.', energy:'Hauptteil', careAlert:'', steps:['Becken auswischen','Armatur trockenreiben'], microStep:'Dreh den Hahn auf.'},
+    {id:84, icon:'🧴', title:'Produkte & Ablage ordnen',     time:'4 Min.', energy:'Hauptteil', careAlert:'', steps:['Flaschen ordnen','Ablage abwischen'], microStep:'Fang mit der ersten Flasche an.'},
+    {id:85, icon:'🚽', title:'Toilette reinigen',            time:'5 Min.', energy:'Gründlich', careAlert:'', steps:['Innen bürsten','Außen abwischen','Boden drumherum wischen'], microStep:'Nimm die Bürste.'},
+    {id:86, icon:'🚿', title:'Dusche reinigen',              time:'8 Min.', energy:'Gründlich', careAlert:'Kalk-Frust: Perfektionismus bremsen, gut ist gut genug.', steps:['Wände einsprühen','Abziehen','Boden reinigen'], microStep:'Sprüh 1x auf die Wand.'},
+    {id:87, icon:'🧹', title:'Boden saugen & wischen',       time:'7 Min.', energy:'Gründlich', careAlert:'', steps:['Matte raus','Saugen','Nass wischen'], microStep:'Heb die Matte auf.'}
+  ]},
+
+  tildas_zimmer: { name:'Tildas Zimmer', icon:'💛', tasks:[
+    {id:100, icon:'🧸', title:'Kuscheltiere aufs Bett',      time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Alle Kuscheltiere einsammeln','Aufs Bett legen'], microStep:'Fang mit dem ersten Kuscheltier an.'},
+    {id:101, icon:'🧱', title:'Bauklötze in die Kiste',      time:'4 Min.', energy:'Aufwärmen', careAlert:'', steps:['Alle Klötze einsammeln','In die Kiste werfen'], microStep:'Fang mit dem ersten Klotz an.'},
+    {id:102, icon:'🎨', title:'Stifte & Papier wegräumen',   time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Stifte in den Becher','Blätter auf den Stapel'], microStep:'Fang mit dem ersten Stift an.'},
+    {id:103, icon:'👗', title:'Verkleidungen aufräumen',     time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Verkleidungen einsammeln','In die Kiste legen'], microStep:'Fang mit dem ersten Stück an.'},
+    {id:104, icon:'📚', title:'Bücher ins Regal',            time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Bücher einsammeln','Ins Regal stellen'], microStep:'Fang mit dem ersten Buch an.'},
+    {id:105, icon:'🗑️', title:'Müll einsammeln',            time:'2 Min.', energy:'Aufwärmen', careAlert:'', steps:['Papier & Verpackungen einsammeln','In den Mülleimer'], microStep:'Fang mit dem ersten Stück Müll an.'},
+    {id:106, icon:'🛏️', title:'Bett machen',                time:'3 Min.', energy:'Hauptteil', careAlert:'', steps:['Decke glattziehen','Kissen hinlegen'], microStep:'Zieh die Decke glatt.'},
+    {id:108, icon:'🧩', title:'Spielsachen verstauen',       time:'5 Min.', energy:'Hauptteil', careAlert:'', steps:['Alle übrigen Spielsachen einsammeln','An ihren festen Platz räumen'], microStep:'Fang mit dem nächsten Spielzeug an.'},
+    {id:107, icon:'🧹', title:'Boden saugen',                time:'5 Min.', energy:'Gründlich', careAlert:'', steps:['Spielzeug wegräumen','Boden absaugen'], microStep:'Hol den Staubsauger.'}
+  ]},
+
+  janos_zimmer: { name:'Janos Zimmer', icon:'💙', tasks:[
+    {id:120, icon:'🗑️', title:'Müll einsammeln',            time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Müll vom Boden & Schreibtisch','In den Eimer'], microStep:'Fang mit dem ersten Stück Müll an.'},
+    {id:121, icon:'🍽️', title:'Geschirr nach unten bringen',time:'3 Min.', energy:'Aufwärmen', careAlert:'Dopamin-Tipp: direkt mit Spülmaschinen-Gang verbinden.', steps:['Gläser & Teller suchen','In die Küche bringen'], microStep:'Nimm das erste Teil, das du siehst.'},
+    {id:122, icon:'🧺', title:'Schmutzwäsche in den Korb',  time:'3 Min.', energy:'Aufwärmen', careAlert:'"Finde 5 Kleidungsstücke" als Spiel.', steps:['Getragene Kleidung einsammeln','In den Wäschekorb'], microStep:'Fang mit dem ersten Kleidungsstück an.'},
+    {id:123, icon:'🛏️', title:'Bett machen',                time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Decke komplett glattziehen','Kissen ordentlich hinlegen'], microStep:'Zieh die Decke glatt.'},
+    {id:124, icon:'🧱', title:'Lego & Bausteine in die Kiste',time:'5 Min.', energy:'Hauptteil', careAlert:'Kein Sortieren nötig — einfach alles rein!', steps:['Alle Steine einsammeln','In die Kiste werfen'], microStep:'Fang mit dem ersten Stein an.'},
+    {id:125, icon:'🚗', title:'Spielzeug vom Boden ins Regal',time:'5 Min.', energy:'Hauptteil', careAlert:'Bei Bedarf gemeinsam machen.', steps:['Spielzeug einsammeln','An festen Platz im Regal'], microStep:'Fang mit dem nächsten Spielzeug an.'},
+    {id:126, icon:'✏️', title:'Schreibtisch aufräumen',     time:'6 Min.', energy:'Hauptteil', careAlert:'Fokus-Gefahr bei Zetteln: Timer stellen!', steps:['Sachen einräumen','Unnötiges wegwerfen','Oberfläche freiräumen'], microStep:'Fang mit dem ersten Ding auf dem Schreibtisch an.'},
+    {id:127, icon:'📚', title:'Bücher & Hefte verstauen',   time:'4 Min.', energy:'Hauptteil', careAlert:'', steps:['Bücher ins Regal','Schulhefte in die Tasche/Mappe'], microStep:'Fang mit dem ersten Buch an.'},
+    {id:128, icon:'🧹', title:'Boden saugen',               time:'6 Min.', energy:'Gründlich', careAlert:'Lautstärke: Kopfhörer anbieten.', steps:['Boden freimachen','Absaugen'], microStep:'Hol den Staubsauger.'}
+  ]},
+
+  elternschlafzimmer: { name:'Elternschlafzimmer', icon:'🛌', tasks:[
+    {id:140, icon:'🛏️', title:'Bett machen',                time:'4 Min.', energy:'Aufwärmen', careAlert:'', steps:['Decken ausschütteln','Glattziehen','Kissen richten'], microStep:'Zieh die erste Decke glatt.'},
+    {id:141, icon:'🧺', title:'Wäsche einsammeln',          time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Kleidung vom Boden & Stuhl','In den Wäschekorb'], microStep:'Fang mit dem ersten Stück an.'},
+    {id:142, icon:'👔', title:'Kleidung aufhängen',         time:'5 Min.', energy:'Aufwärmen', careAlert:'', steps:['Auf Bügel hängen','In den Kleiderschrank'], microStep:'Fang mit dem ersten Kleidungsstück an.'},
+    {id:143, icon:'🗑️', title:'Müll leeren',               time:'2 Min.', energy:'Aufwärmen', careAlert:'', steps:['Beutel raus','Neuen rein'], microStep:'Geh zum Mülleimer.'},
+    {id:144, icon:'🛋️', title:'Nachttische aufräumen',     time:'5 Min.', energy:'Hauptteil', careAlert:'', steps:['Gläser & Bücher wegräumen','Oberfläche abwischen'], microStep:'Fang mit dem linken Nachttisch an.'},
+    {id:145, icon:'🧽', title:'Oberflächen abstauben',      time:'5 Min.', energy:'Hauptteil', careAlert:'', steps:['Kommode & Schrank abwischen','Staub entfernen'], microStep:'Nimm das Tuch.'},
+    {id:146, icon:'🪞', title:'Spiegel reinigen',           time:'3 Min.', energy:'Hauptteil', careAlert:'', steps:['Glasreiniger drauf','Streifenfrei wischen'], microStep:'Sprüh 1x auf den Spiegel.'},
+    {id:147, icon:'🧹', title:'Boden saugen',               time:'6 Min.', energy:'Gründlich', careAlert:'', steps:['Unter dem Bett saugen','Gesamten Boden'], microStep:'Hol den Staubsauger.'},
+    {id:148, icon:'🪣', title:'Boden wischen',              time:'7 Min.', energy:'Gründlich', careAlert:'', steps:['Eimer füllen','Feucht wischen','Trocknen lassen'], microStep:'Fülle den Eimer.'}
+  ]},
+
+  mias_zimmer: { name:'Mias Zimmer', icon:'💜', tasks:[
+    {id:160, icon:'🗑️', title:'Müll einsammeln',           time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Müll vom Boden & Schreibtisch','In den Mülleimer'], microStep:'Fang mit dem ersten Stück Müll an.'},
+    {id:161, icon:'🍽️', title:'Geschirr nach unten bringen',time:'4 Min.', energy:'Aufwärmen', careAlert:'', steps:['Gläser & Teller suchen','In die Spülmaschine'], microStep:'Nimm das erste Teil, das du siehst.'},
+    {id:162, icon:'🧺', title:'Schmutzwäsche einsammeln',   time:'4 Min.', energy:'Aufwärmen', careAlert:'', steps:['Kleidung einsammeln','In den Wäschesack'], microStep:'Fang mit dem ersten Kleidungsstück an.'},
+    {id:163, icon:'🛏️', title:'Bett machen',               time:'3 Min.', energy:'Aufwärmen', careAlert:'', steps:['Decke glattziehen','Kissen richten'], microStep:'Zieh die Decke glatt.'},
+    {id:164, icon:'👕', title:'Saubere Wäsche einräumen',   time:'5 Min.', energy:'Hauptteil', careAlert:'', steps:['Zusammenfalten','In den Schrank legen'], microStep:'Fang mit dem ersten Teil an.'},
+    {id:165, icon:'💻', title:'Schreibtisch aufräumen',     time:'8 Min.', energy:'Hauptteil', careAlert:'Timer stellen gegen Ablenkung durch alte Zettel.', steps:['Sachen einräumen','Unnötiges wegwerfen','Oberfläche freiräumen'], microStep:'Fang mit dem ersten Ding, das du siehst.'},
+    {id:166, icon:'💄', title:'Schminktisch aufräumen',     time:'5 Min.', energy:'Hauptteil', careAlert:'', steps:['Produkte an festen Platz','Oberfläche abwischen'], microStep:'Fang mit dem ersten Produkt an.'},
+    {id:167, icon:'📚', title:'Regale ordnen',              time:'6 Min.', energy:'Hauptteil', careAlert:'', steps:['Bücher sortieren','Kleinigkeiten wegräumen'], microStep:'Nimm das erste Buch, das du siehst.'},
+    {id:168, icon:'🧹', title:'Boden saugen',                time:'5 Min.', energy:'Gründlich', careAlert:'', steps:['Möbel leicht verrücken','Boden komplett absaugen','Ecken nicht vergessen'], microStep:'Hol den Staubsauger.'},
+    {id:170, icon:'🪣', title:'Boden wischen',               time:'5 Min.', energy:'Gründlich', careAlert:'', steps:['Eimer mit Wasser füllen','Boden feucht nachwischen','Trocknen lassen'], microStep:'Fülle den Eimer.'},
+    {id:169, icon:'🪟', title:'Fenster & Spiegel putzen',   time:'5 Min.', energy:'Gründlich', careAlert:'', steps:['Fensterbank abwischen','Spiegel streifenfrei putzen'], microStep:'Nimm das Tuch.'}
+  ]}
+};
+
+let currentChild = null;
+let currentRoom  = 'bad_unten';
+let selectedTasks = new Set();
+
+/* ============================================================
+   INIT / ROUTING
+   ============================================================ */
+function init() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mode') === 'child') {
+    renderChildView(params);
+  } else {
+    document.getElementById('elternAnsicht').style.display = 'block';
+    buildChildPicker();
+    buildRoomTabs();
+    buildElternGrid();
+  }
+}
+
+function buildChildPicker() {
+  const wrap = document.getElementById('childPicker');
+  wrap.innerHTML = '';
+  Object.keys(CHILDREN).forEach(key => {
+    const c = CHILDREN[key];
+    const el = document.createElement('div');
+    el.className = 'child-card' + (currentChild === key ? ' selected' : '');
+    el.style.setProperty('--c-color', c.color);
+    el.style.setProperty('--c-bg', c.bg);
+    el.onclick = () => { currentChild = key; buildChildPicker(); validateEltern(); };
+    el.innerHTML = `
+      <div class="child-avatar" style="background:${c.bg};">${c.icon}</div>
+      <div class="child-info">
+        <div class="child-name">${c.name}${c.age ? ` <span style="font-weight:600;color:var(--muted);">· ${c.age} J.</span>` : ''}</div>
+        <div class="child-tag">${c.tag}</div>
+      </div>
+      <div class="child-check"></div>`;
+    wrap.appendChild(el);
+  });
+}
+
+function buildRoomTabs() {
+  const container = document.getElementById('roomTabs');
+  container.innerHTML = '';
+  Object.keys(DATA).forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = `room-tab ${key === currentRoom ? 'active' : ''}`;
+    btn.innerText = `${DATA[key].icon} ${DATA[key].name}`;
+    btn.onclick = () => {
+      currentRoom = key;
+      selectedTasks.clear();
+      buildRoomTabs();
+      buildElternGrid();
+      validateEltern();
+    };
+    container.appendChild(btn);
+  });
+}
+
+function buildElternGrid() {
+  const grid = document.getElementById('selectGrid');
+  grid.innerHTML = '';
+  DATA[currentRoom].tasks.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'select-item' + (selectedTasks.has(t.id) ? ' selected' : '');
+    el.onclick = () => {
+      if (selectedTasks.has(t.id)) selectedTasks.delete(t.id);
+      else selectedTasks.add(t.id);
+      buildElternGrid();
+      validateEltern();
+    };
+    let energyColor = t.energy === 'Aufwärmen' ? 'var(--green)' : (t.energy === 'Hauptteil' ? 'var(--gold)' : 'var(--coral)');
+    el.innerHTML = `
+      <div class="s-num" style="background:${energyColor};">★</div>
+      <div class="s-icon">${t.icon}</div>
+      <div class="s-body">
+        <div class="s-title">${t.title}</div>
+        <div class="s-sub">⏱ ${t.time} · <span style="color:${energyColor};font-weight:bold;">${t.energy}</span></div>
+      </div>
+      ${t.careAlert ? `<div class="care-alert">💡 ${t.careAlert}</div>` : ''}
+      <div class="s-check"></div>`;
+    grid.appendChild(el);
+  });
+}
+
+function validateEltern() {
+  document.getElementById('whatsappBtn').disabled = !(currentChild && selectedTasks.size > 0);
+}
+
+function sendToWhatsApp() {
+  const c = CHILDREN[currentChild];
+  const taskIds = Array.from(selectedTasks).join(',');
+  const localPath = window.location.href.split('?')[0];
+  const childLink = `${localPath}?mode=child&child=${currentChild}&room=${currentRoom}&tasks=${taskIds}`;
+  const greetings = {
+    teen:  c.name === 'Eltern' ? `Hallo! Hier ist der Plan für ${DATA[currentRoom].name}:` : `Hey ${c.name}, hier ist dein Plan für ${DATA[currentRoom].name}:`,
+    focus: `Hi ${c.name}! 🌟 Dein Plan für ${DATA[currentRoom].name} wartet – öffne ihn gleich!`,
+    mini:  `Kleine Helferin gesucht! 💛 Tipp auf den Link für deine Aufgabe:`
+  };
+  const message = `${greetings[c.mode]}\n\n🔗 ${childLink}\n\nDu schaffst das! 🏆`;
+  window.location.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+}
+
+init();
+
+/* ============================================================
+   WHATSAPP FERTIG-MELDUNG
+   ============================================================ */
+function sendDoneWhatsApp(childName, roomName, doneTasks) {
+  const taskList = doneTasks.map(t => `✅ ${t.title}`).join('\n');
+  const msg = `Hallo! 👋\n\n*${childName}* hat alle Aufgaben im *${roomName}* erledigt! 🎉\n\nErledigt:\n${taskList}\n\n⭐ Super gemacht!`;
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+}
+
+/* ============================================================
+   ROUTING KINDER
+   ============================================================ */
+function renderChildView(params) {
+  const childKey = params.get('child');
+  const roomKey  = params.get('room');
+  const taskIds  = (params.get('tasks') || '').split(',').map(Number);
+  const c        = CHILDREN[childKey];
+  const room     = DATA[roomKey] || DATA.bad_unten;
+  const tasks    = room.tasks.filter(t => taskIds.includes(t.id));
+
+  const container = document.getElementById('kinderAnsicht');
+  container.style.display = 'block';
+
+  if (c.mode === 'teen')  renderTeenMode(container, c, room, tasks);
+  if (c.mode === 'focus') renderFocusMode(container, c, room, tasks);
+  if (c.mode === 'mini')  renderMiniMode(container, c, room, tasks);
+}
+
+/* ============================================================
+   MODUS 1 — MIA (16): Teen-Modus, klare Struktur, volle Liste
+   ============================================================ */
+function renderTeenMode(container, c, room, tasks) {
+  const total = tasks.length;
+  container.innerHTML = `
+    <div class="teen-body">
+      <div class="kid-header teen-header">
+        <h1>${room.icon} ${room.name}</h1>
+        <p>Liste · ${total} Aufgaben</p>
+        <div class="kid-progress-bg"><div class="kid-progress-fill" id="prog"></div></div>
+        <div class="kid-progress-text" id="progText">0 / ${total} erledigt</div>
+      </div>
+      <div class="teen-list" id="teenList"></div>
+    </div>`;
+
+  const list = document.getElementById('teenList');
+  tasks.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'teen-card';
+    card.innerHTML = `
+      <div class="teen-checkbox">✓</div>
+      <div class="teen-icon">${t.icon}</div>
+      <div class="teen-text">
+        <div class="teen-title">${t.title}</div>
+        <div class="teen-meta">${t.time} · ${t.energy}</div>
+        <ul class="teen-steps">${t.steps.map(s => `<li>${s}</li>`).join('')}</ul>
+      </div>`;
+    card.querySelector('.teen-checkbox').onclick = (e) => {
+      e.stopPropagation();
+      card.classList.toggle('done');
+      updateTeenProgress(total, tasks, c, room);
+    };
+    card.querySelector('.teen-text').onclick = () => card.classList.toggle('expanded');
+    list.appendChild(card);
+  });
+}
+
+function updateTeenProgress(total, tasks, c, room) {
+  const done = document.querySelectorAll('.teen-card.done').length;
+  document.getElementById('prog').style.width = (done / total * 100) + '%';
+  document.getElementById('progText').textContent = `${done} / ${total} erledigt`;
+  const existing = document.getElementById('waDoneBtn');
+  if (done === total) {
+    if (!existing) {
+      const btn = document.createElement('button');
+      btn.id = 'waDoneBtn';
+      btn.className = 'wa-done-btn';
+      btn.innerHTML = `${waIcon()} Fertig melden per WhatsApp`;
+      btn.onclick = () => sendDoneWhatsApp(c.name, room.name, tasks);
+      document.getElementById('teenList').after(btn);
+    }
+  } else if (existing) {
+    existing.remove();
+  }
+}
+
+/* ============================================================
+   MODUS 2 — JANO (9, ADHS+ASS): Focus-Modus, Gesamtübersicht,
+   warmer Ton, Mikro-Schritte, blaue Akzente
+   ============================================================ */
+function renderFocusMode(container, c, room, tasks) {
+  const total = tasks.length;
+  container.innerHTML = `
+    <div class="focus-body">
+      <div class="kid-header focus-header">
+        <h1>${room.icon} ${room.name}</h1>
+        <p>Hi ${c.name}! Du siehst alles auf einen Blick 💪</p>
+        <div class="kid-progress-bg"><div class="kid-progress-fill" id="prog"></div></div>
+        <div class="kid-progress-text" id="progText">0 / ${total} geschafft</div>
+      </div>
+      <div class="focus-list" id="focusList"></div>
+      <div class="focus-celebration" id="focusCel">
+        <div style="font-size:2.8rem">🎉</div>
+        <div style="font-size:1.2rem;font-weight:900;color:#1a2e4a;margin-top:6px;">Alles geschafft, ${c.name}!</div>
+        <p style="color:#8899aa;font-weight:600;margin-top:6px;">Mega gemacht – du hast's durchgezogen! 🌟</p>
+      </div>
+    </div>`;
+
+  const list = document.getElementById('focusList');
+  tasks.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'focus-list-card';
+    card.innerHTML = `
+      <div class="focus-checkbox">✓</div>
+      <div class="focus-list-icon">${t.icon}</div>
+      <div class="focus-list-text">
+        <div class="focus-list-title">${t.title}</div>
+        <div class="focus-list-meta">⏱ ${t.time}</div>
+        <div class="focus-list-micro">👉 ${t.microStep}</div>
+        <ul class="focus-list-steps">${t.steps.map(s => `<li>${s}</li>`).join('')}</ul>
+        ${t.careAlert ? `<div class="focus-care">💡 ${t.careAlert}</div>` : ''}
+      </div>`;
+    card.querySelector('.focus-checkbox').onclick = (e) => {
+      e.stopPropagation();
+      card.classList.toggle('done');
+      updateFocusProgress(total, tasks, c, room);
+    };
+    card.querySelector('.focus-list-text').onclick = () => card.classList.toggle('expanded');
+    list.appendChild(card);
+  });
+}
+
+function updateFocusProgress(total, tasks, c, room) {
+  const done = document.querySelectorAll('.focus-list-card.done').length;
+  document.getElementById('prog').style.width = (done / total * 100) + '%';
+  document.getElementById('progText').textContent = `${done} / ${total} geschafft`;
+  const cel = document.getElementById('focusCel');
+  const existing = document.getElementById('waDoneBtn');
+  if (done === total) {
+    cel.classList.add('show');
+    cel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!existing) {
+      const btn = document.createElement('button');
+      btn.id = 'waDoneBtn';
+      btn.className = 'wa-done-btn';
+      btn.innerHTML = `${waIcon()} Fertig melden per WhatsApp`;
+      btn.onclick = () => sendDoneWhatsApp(c.name, room.name, tasks);
+      cel.after(btn);
+    }
+  } else {
+    cel.classList.remove('show');
+    if (existing) existing.remove();
+  }
+}
+
+/* ============================================================
+   MODUS 3 — TILDA (6): Mini-Modus, großes Icon, kein langer
+   Text, Piktogramme führen durch die Aufgaben
+   ============================================================ */
+function renderMiniMode(container, c, room, tasks) {
+  let idx = 0;
+  const total = tasks.length || 1;
+
+  // Aufgaben-Szenen: je nach ID ein passendes Hintergrundgradient
+  const sceneThemes = {
+    100: 'linear-gradient(160deg,#fef3c7,#fde68a)',
+    101: 'linear-gradient(160deg,#dbeafe,#bfdbfe)',
+    102: 'linear-gradient(160deg,#ffe4e6,#fecdd3)',
+    103: 'linear-gradient(160deg,#ede9fe,#ddd6fe)',
+    104: 'linear-gradient(160deg,#fef9c3,#fef08a)',
+    105: 'linear-gradient(160deg,#e0e7ff,#c7d2fe)',
+    106: 'linear-gradient(160deg,#d1fae5,#a7f3d0)',
+    107: 'linear-gradient(160deg,#cffafe,#a5f3fc)'
+  };
+  const defaultScene = 'linear-gradient(160deg,#fff3c4,#ffe9a8)';
+
+  container.innerHTML = `<div class="mini-body"><div class="mini-stage" id="miniStage"></div></div>`;
+
+  function renderStage() {
+    const stage = document.getElementById('miniStage');
+
+    if (idx >= total) {
+      stage.innerHTML = `
+        <div class="mini-confetti-stage" id="confettiStage"></div>
+        <div class="mini-scene" style="background:linear-gradient(160deg,#fff9db,#fef3c7);">
+          <div class="mini-scene-icon">🌟</div>
+        </div>
+        <div class="mini-title">Super, ${c.name}! 🎉</div>
+        <button class="wa-done-btn" style="margin-top:8px;" id="waDoneBtn">
+          ${waIcon()} Fertig melden per WhatsApp
+        </button>`;
+      document.getElementById('waDoneBtn').onclick = () => sendDoneWhatsApp(c.name, room.name, tasks);
+      launchConfetti();
+      return;
+    }
+
+    const t = tasks[idx];
+    const scene = sceneThemes[t.id] || defaultScene;
+
+    // Für Tilda: microStep als einzige Info, kein langer Titel
+    stage.innerHTML = `
+      <div class="mini-scene" style="background:${scene};">
+        <div class="mini-scene-icon">${t.icon}</div>
+      </div>
+      <div class="mini-title">${t.microStep || t.title}</div>
+      <button class="mini-btn" id="miniBtn">Geschafft! 🎉</button>`;
+
+    document.getElementById('miniBtn').onclick = () => { idx++; renderStage(); };
+  }
+
+  renderStage();
+}
+
+function launchConfetti() {
+  const stage = document.getElementById('confettiStage');
+  if (!stage) return;
+  const pieces = ['🎉','🎊','⭐','💛','🌟','✨'];
+  for (let i = 0; i < 24; i++) {
+    const span = document.createElement('span');
+    span.className = 'confetti-piece';
+    span.textContent = pieces[Math.floor(Math.random() * pieces.length)];
+    span.style.left = Math.random() * 100 + '%';
+    span.style.animationDelay = (Math.random() * 0.4) + 's';
+    span.style.animationDuration = (1.6 + Math.random() * 0.8) + 's';
+    span.style.fontSize = (1.2 + Math.random() * 1.2) + 'rem';
+    stage.appendChild(span);
+  }
+}
+
+function waIcon() {
+  return `<svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
+}
+</script>
+</body>
+</html>
